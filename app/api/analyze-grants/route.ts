@@ -89,7 +89,6 @@ const scrapeGrants = async (url: string, cookies: string[]) => {
       
       if (nextHref && !nextHref.includes('javascript:void(0)') && nextLi.index() < $('.pagination li').length - 1) {
         nextPage = 'https://www.grantwatch.com' + nextHref
-        console.log(`Moving to next page: ${nextPage}`)
       }
     }
   }
@@ -235,7 +234,6 @@ export async function POST(request: Request) {
 
         currentUrl = nextPage
       }
-      console.log('No more pages to scrape')
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -247,8 +245,13 @@ export async function POST(request: Request) {
 
   return new NextResponse(stream.readable, {
     headers: {
-      'Content-Type': 'application/json',
-      'Transfer-Encoding': 'chunked'
+      'Content-Type': 'text/plain; charset=UTF-8',
+      'Transfer-Encoding': 'chunked',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Accel-Buffering': 'no',
+      'Content-Encoding': 'identity'
     }
   })
 }
