@@ -103,6 +103,7 @@ const analyzeGrant = async (grant: { title: string, url: string, summary: string
 LegiEquity Company Background:
 Our Mission: We strive to democratize legislative analysis by providing clear, unbiased insights into how bills impact different communities. Our platform empowers citizens, legislators, and advocacy groups with data-driven understanding of legislative effects.
 Technology: Using state-of-the-art AI and machine learning, we analyze legislative text to identify potential impacts across various demographic groups. Our technology provides unprecedented insight into the real-world effects of legislation.
+Company Location: Atlanta Metro Area, Georgia
 
 Your response must be a valid JSON object with these properties:
 - recommendation: "YES" or "NO"
