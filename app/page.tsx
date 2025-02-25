@@ -2,6 +2,17 @@
 
 import { useState } from 'react'
 
+type Grant = {
+  title: string
+  url: string
+  summary: string
+  deadline: string
+  analysis: {
+    recommendation: string
+    reason: string
+  }
+}
+
 export default function Home() {
   const [url, setUrl] = useState('')
   const [requirements, setRequirements] = useState(`
@@ -17,15 +28,13 @@ export default function Home() {
     general grants, small business grants, startup grants,
     `)
   const [isLoading, setIsLoading] = useState(false)
-  const [results, setResults] = useState<Array<{
-    title: string
-    url: string
-    summary: string
-  }>>([]);
+  const [results, setResults] = useState<Grant[]>([]);
+  const [selectedGrant, setSelectedGrant] = useState<Grant | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setResults([])
     
     try {
       const response = await fetch('/api/analyze-grants', {
@@ -83,18 +92,100 @@ export default function Home() {
         </div>
       </form>
 
-      <div className="space-y-6">
-        {results.map((grant, index) => (
-          <div key={index} className="p-6 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-2">
-              <a href={grant.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                {grant.title}
-              </a>
-            </h2>
-            <p className="text-gray-600">{grant.summary}</p>
+      {/* Table-like results layout */}
+      {results.length > 0 && (
+        <div className="mt-8">
+          <div className="grid grid-cols-12 gap-4 font-bold px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-t-lg">
+            <div className="col-span-1">Status</div>
+            <div className="col-span-2">Deadline</div>
+            <div className="col-span-9">Title</div>
           </div>
-        ))}
-      </div>
+          
+          <div className="space-y-1 mt-1">
+            {results.map((grant, index) => {
+              const isRecommended = grant.analysis?.recommendation === "YES";
+              
+              return (
+                <div 
+                  key={index} 
+                  className="grid grid-cols-12 gap-4 px-4 py-3 bg-white dark:bg-gray-900 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                  onClick={() => setSelectedGrant(grant)}
+                >
+                  <div className="col-span-1">
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                      isRecommended 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    }`}>
+                      {isRecommended ? 'YES' : 'NO'}
+                    </span>
+                  </div>
+                  <div className="col-span-2 text-sm">{grant.deadline || 'No deadline'}</div>
+                  <div className="col-span-9 truncate">{grant.title}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* Grant details popover */}
+      {selectedGrant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedGrant(null)}>
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-start">
+                <h2 className="text-xl font-semibold">{selectedGrant.title}</h2>
+                <button 
+                  onClick={() => setSelectedGrant(null)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="mt-4 space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Deadline</h3>
+                  <p>{selectedGrant.deadline || 'No deadline specified'}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Recommendation</h3>
+                  <div className="mt-1">
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                      selectedGrant.analysis?.recommendation === "YES" 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    }`}>
+                      {selectedGrant.analysis?.recommendation || 'UNKNOWN'}
+                    </span>
+                    <p className="mt-2">{selectedGrant.analysis?.reason}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Summary</h3>
+                  <p className="mt-1">{selectedGrant.summary}</p>
+                </div>
+                
+                <div className="pt-2">
+                  <a 
+                    href={selectedGrant.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    View Grant Details
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

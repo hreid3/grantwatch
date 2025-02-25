@@ -63,17 +63,30 @@ const scrapeGrants = async (url: string, cookies: string[]) => {
     })
   })
 
-  // Update pagination logic
+  // Update pagination logic to navigate pages sequentially
   let nextPage = null
   const pagination = $('.pagination')
   
   if (pagination.length > 0) {
-    const activePageHref = $('.pagination .active a').attr('href')
-    const nextButtonHref = $('.pagination li:last-child a').attr('href')
+    // Find the current active page
+    const activeLi = $('.pagination li.active')
     
-    // If the next button link exists and points to a different URL than the current active page
-    if (nextButtonHref && activePageHref && nextButtonHref !== activePageHref) {
-      nextPage = 'https://www.grantwatch.com' + nextButtonHref
+    if (activeLi.length > 0) {
+      // Try to find the next sequential page by looking at the next sibling
+      let nextLi = activeLi.next()
+      
+      // Skip ellipsis (...) items
+      while (nextLi.length > 0 && nextLi.find('a').text() === '...') {
+        nextLi = nextLi.next()
+      }
+      
+      // Get href if this is a valid navigation item (not the last "»" button)
+      const nextHref = nextLi.find('a').attr('href')
+      
+      if (nextHref && !nextHref.includes('javascript:void(0)') && nextLi.index() < $('.pagination li').length - 1) {
+        nextPage = 'https://www.grantwatch.com' + nextHref
+        console.log(`Moving to next page: ${nextPage}`)
+      }
     }
   }
   
@@ -81,16 +94,26 @@ const scrapeGrants = async (url: string, cookies: string[]) => {
 }
 
 const analyzeGrant = async (grant: { title: string, url: string, summary: string, deadline: string }, requirements: string) => {
-  const systemPrompt = `You are a grant evaluation assistant. Analyze this grant opportunity and provide a clear YES/NO recommendation based on these criteria:
+  const systemPrompt = `You are a grant evaluation assistant. Analyze this grant opportunity and provide a clear recommendation based on these criteria:
 
-1. Technology Focus: The grant must directly support technology or software development projects
+1. Feasibility: Review the requirements and determine if the grant is feasible.
 2. Funding Adequacy: The grant amount must be sufficient for meaningful development work
-3. Feasibility: The application process and requirements must be reasonable and achievable
-4. Timeline: The grant schedule must allow proper implementation
+3. Relevance: The grant must be relevant to the requirements.
 
-Provide your response in this format:
-Recommendation: [YES/NO]
-Reason: [Brief 1-2 sentence explanation]`
+LegiEquity Company Background:
+Our Mission: We strive to democratize legislative analysis by providing clear, unbiased insights into how bills impact different communities. Our platform empowers citizens, legislators, and advocacy groups with data-driven understanding of legislative effects.
+Technology: Using state-of-the-art AI and machine learning, we analyze legislative text to identify potential impacts across various demographic groups. Our technology provides unprecedented insight into the real-world effects of legislation.
+
+Your response must be a valid JSON object with these properties:
+- recommendation: "YES" or "NO"
+- reason: A brief 1-2 sentence explanation
+
+Example response:
+{
+  "recommendation": "YES",
+  "reason": "This grant directly supports technology development with adequate funding and has a feasible timeline."
+}
+`
 
   const userPrompt = `Please analyze this grant opportunity:
 
@@ -98,7 +121,7 @@ Title: ${grant.title}
 Summary: ${grant.summary}
 Deadline: ${grant.deadline}
 
-Additional Requirements: ${requirements}`
+Matching Requirements: ${requirements}`
 
   const completion = await openai.chat.completions.create({
     messages: [
@@ -107,11 +130,23 @@ Additional Requirements: ${requirements}`
     ],
     model: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
     temperature: 0.7,
+    response_format: { type: "json_object" }
   })
+
+  const analysisText = completion.choices[0].message.content || "";
+  let analysis;
+  try {
+    analysis = JSON.parse(analysisText);
+  } catch (error) {
+    analysis = { 
+      recommendation: "UNKNOWN", 
+      reason: "Failed to parse analysis result" 
+    };
+  }
 
   return {
     ...grant,
-    analysis: completion.choices[0].message.content
+    analysis
   }
 }
 
@@ -141,6 +176,7 @@ export async function POST(request: Request) {
 
         currentUrl = nextPage
       }
+      console.log('No more pages to scrape')
     } catch (error) {
       console.error('Error:', error)
     } finally {
