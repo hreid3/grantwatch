@@ -10,6 +10,7 @@ type Grant = {
   analysis: {
     recommendation: string
     reason: string
+    confidence: number
   }
 }
 
@@ -95,10 +96,10 @@ export default function Home() {
       {/* Table-like results layout */}
       {results.length > 0 && (
         <div className="mt-8">
-          <div className="grid grid-cols-12 gap-4 font-bold px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-t-lg">
+          <div className="grid grid-cols-4 gap-4 font-bold px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-t-lg">
             <div className="col-span-1">Status</div>
-            <div className="col-span-2">Deadline</div>
-            <div className="col-span-9">Title</div>
+            <div className="col-span-1">Deadline</div>
+            <div className="col-span-2">Title</div>
           </div>
           
           <div className="space-y-1 mt-1">
@@ -108,20 +109,45 @@ export default function Home() {
               return (
                 <div 
                   key={index} 
-                  className="grid grid-cols-12 gap-4 px-4 py-3 bg-white dark:bg-gray-900 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                  className={`grid grid-cols-4 gap-4 px-4 py-3 rounded-md hover:${
+                    isRecommended ? 'bg-green-300' : 'bg-gray-50'
+                  } dark:hover:${
+                    isRecommended ? 'bg-green-800/40' : 'bg-gray-800'
+                  } cursor-pointer ${
+                    isRecommended 
+                      ? 'bg-green-200 dark:bg-green-800/30 border-l-4 border-green-500' 
+                      : 'bg-white dark:bg-gray-900'
+                  }`}
                   onClick={() => setSelectedGrant(grant)}
                 >
-                  <div className="col-span-1">
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                      isRecommended 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {isRecommended ? 'YES' : 'NO'}
-                    </span>
+                  {/* Simple fixed-width badge layout */}
+                  <div className="col-span-1 flex items-center space-x-2">
+                    <div className="w-12 flex-shrink-0">
+                      <span className={`inline-block w-full text-center px-2 py-1 rounded text-xs font-semibold ${
+                        isRecommended 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}>
+                        {isRecommended ? 'YES' : 'NO'}
+                      </span>
+                    </div>
+                    
+                    <div className="w-16 flex-shrink-0">
+                      {grant.analysis?.confidence && (
+                        <span className={`inline-block w-full text-center px-2 py-1 rounded text-xs font-semibold ${
+                          grant.analysis.confidence >= 7 
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                            : grant.analysis.confidence >= 4
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                        }`}>
+                          {grant.analysis.confidence}/10
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="col-span-2 text-sm">{grant.deadline || 'No deadline'}</div>
-                  <div className="col-span-9 truncate">{grant.title}</div>
+                  <div className="col-span-1 text-sm">{grant.deadline || 'No deadline'}</div>
+                  <div className="col-span-2 truncate">{grant.title}</div>
                 </div>
               );
             })}
@@ -155,13 +181,27 @@ export default function Home() {
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Recommendation</h3>
                   <div className="mt-1">
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                      selectedGrant.analysis?.recommendation === "YES" 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {selectedGrant.analysis?.recommendation || 'UNKNOWN'}
-                    </span>
+                    <div className="flex items-center flex-wrap gap-2">
+                      <span className={`inline-flex justify-center items-center px-3 py-1 rounded text-sm font-semibold ${
+                        selectedGrant.analysis?.recommendation === "YES" 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}>
+                        {selectedGrant.analysis?.recommendation || 'UNKNOWN'}
+                      </span>
+                      
+                      {selectedGrant.analysis?.confidence && (
+                        <span className={`inline-flex justify-center items-center px-3 py-1 rounded text-sm font-semibold ${
+                          selectedGrant.analysis.confidence >= 7 
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                            : selectedGrant.analysis.confidence >= 4
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                        }`}>
+                          Confidence: {selectedGrant.analysis.confidence}/10
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-2">{selectedGrant.analysis?.reason}</p>
                   </div>
                 </div>
