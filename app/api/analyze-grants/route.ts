@@ -4,7 +4,9 @@ import axios from 'axios'
 import { OpenAI } from 'openai'
 import puppeteer from 'puppeteer'
 import type { Cookie } from 'puppeteer'
-import type { CheerioAPI, Element } from 'cheerio'
+
+type CheerioRoot = ReturnType<typeof cheerio.load>
+type CheerioElement = cheerio.Element
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -45,12 +47,12 @@ const scrapeGrants = async (url: string, cookies: string[]) => {
   const response = await axios.get(url, {
     headers: { Cookie: cookies.join('; ') }
   })
-  const $: CheerioAPI = cheerio.load(response.data)
+  const $: CheerioRoot = cheerio.load(response.data)
   
   const cardSelector = '.grnhomegbox'
   const grants: { title: string; url: string; summary: string; deadline: string }[] = []
   
-  $(cardSelector).each((_: number, element: Element) => {
+  $(cardSelector).each((_: number, element: CheerioElement) => {
     const title = $(element).find('h4').text().trim()
     const url = $(element).find('> a').attr('href')
     const fullUrl = url ? `https://www.grantwatch.com${url}` : ''
@@ -101,7 +103,7 @@ const fetchGrantDetails = async (grantUrl: string, cookies: string[]) => {
       headers: { Cookie: cookies.join('; ') }
     })
     
-    const $: CheerioAPI = cheerio.load(response.data)
+    const $: CheerioRoot = cheerio.load(response.data)
     
     // Extract detailed information using the selector
     const detailsContainer = $('.row.grntdetboxmainlst')
@@ -110,7 +112,7 @@ const fetchGrantDetails = async (grantUrl: string, cookies: string[]) => {
     const details: Record<string, string> = {}
     
     // Extract all detail sections
-    detailsContainer.each((_: number, element: Element) => {
+    detailsContainer.each((_: number, element: CheerioElement) => {
       // Get the section title (left column)
       const titleElement = $(element).find('.col-lg-3').first()
       const title = titleElement.find('div[style*="font-size: 20px"]').text().trim()
