@@ -15,7 +15,20 @@ const openai = new OpenAI({
 })
 
 const login = async () => {
-  const browser = await puppeteer.launch({ headless: true })
+  const browser = await puppeteer.launch({ 
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-gpu'
+    ],
+    executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined
+  })
   const page = await browser.newPage()
 
   try {
